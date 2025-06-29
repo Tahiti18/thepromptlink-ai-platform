@@ -1,76 +1,163 @@
-export default async (request, context) => {
-  const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-  const API_URL = "https://api.anthropic.com/v1/messages";
+const fetch = require('node-fetch');
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    });
+exports.handler = async (event, context) => {
+  // CORS headers for cross-origin requests
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  // Handle preflight OPTIONS request
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
   }
 
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({
+        error: 'Method Not Allowed',
+        message: 'Only POST requests are supported'
+      })
+    };
   }
 
   try {
-    const { message, conversationHistory = [] } = await request.json();
+    // Parse request body
+    let requestBody;
+    try {
+      requestBody = JSON.parse(event.body);
+    } catch (parseError) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          error: 'Invalid JSON',
+          message: 'Request body must be valid JSON'
+        })
+      };
+    }
 
-    const body = {
-      model: "claude-3-opus-20240229",
-      max_tokens: 1000,
-      temperature: 0.7,
+    // Validate required fields
+    const { prompt, model = 'claude-3-sonnet-20240229' } = requestBody;
+    
+    if (!prompt) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          error: 'Missing Required Field',
+          message: 'Prompt is required in request body'
+        })
+      };
+    }
+
+    // Get GenSpark API key from environment variables
+    const GENSPARK_API_KEY = process.env.GENSPARK_API_KEY;
+    
+    if (!GENSPARK_API_KEY) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          error: 'Configuration Error',
+          message: 'GenSpark API key not configured'
+        })
+      };
+    }
+
+    // Prepare request to GenSpark Claude API
+    const gensparkRequest = {
+      model: model,
       messages: [
-        ...conversationHistory,
-        { role: "user", content: message }
-      ]
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: requestBody.max_tokens || 4000,
+      temperature: requestBody.temperature || 0.7,
+      stream: false
     };
 
-    const response = await fetch(API_URL, {
-      method: "POST",
+    // Call GenSpark Claude API
+    const gensparkResponse = await fetch('https://api.genspark.ai/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "x-api-key": CLAUDE_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json"
+        'Authorization': `Bearer ${GENSPARK_API_KEY}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'PromptLink-Netlify-Function/1.0'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(gensparkRequest),
+      timeout: 30000
     });
 
-    const data = await response.json();
+    // Check if GenSpark API request was successful
+    if (!gensparkResponse.ok) {
+      const errorData = await gensparkResponse.text();
+      console.error('GenSpark API Error:', errorData);
+      
+      return {
+        statusCode: gensparkResponse.status,
+        headers,
+        body: JSON.stringify({
+          error: 'GenSpark API Error',
+          message: `API request failed with status ${gensparkResponse.status}`,
+          details: errorData
+        })
+      };
+    }
 
-    return new Response(JSON.stringify({
-      status: "success",
-      claudeReply: data.content,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    // Parse GenSpark response
+    const gensparkData = await gensparkResponse.json();
 
-  } catch (err) {
-    return new Response(JSON.stringify({
-      error: "Claude API call failed",
-      details: err.message,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    // Extract Claude's response
+    const claudeResponse = gensparkData.choices?.[0]?.message?.content;
+    
+    if (!claudeResponse) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          error: 'Invalid Response',
+          message: 'No response content received from Claude API',
+          raw_response: gensparkData
+        })
+      };
+    }
+
+    // Return successful response
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        response: claudeResponse,
+        model: model,
+        usage: gensparkData.usage || {},
+        timestamp: new Date().toISOString()
+      })
+    };
+
+  } catch (error) {
+    console.error('Function Error:', error);
+    
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        error: 'Function Error',
+        message: error.message || 'Internal server error',
+        timestamp: new Date().toISOString()
+      })
+    };
   }
 };
