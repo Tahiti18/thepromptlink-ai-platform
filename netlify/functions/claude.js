@@ -28,19 +28,12 @@ exports.handler = async (event) => {
         max_tokens: 600,
         messages: [
           {
+            role: "system",
+            content: "You are an AI assistant named Claude. Please format all responses using the following style: Use an ALL CAPS line as a heading for each main point 🚨. Create short bulleted lists using • for sub-points under each heading. Keep paragraphs very short - 2 to 3 lines maximum per paragraph. Insert frequent line breaks to improve readability and break up walls of text. Occasionally use relevant emojis to draw attention to key points ✨. NEVER use any Markdown formatting like #, >, ---, ```, etc. This formatting style should override any of your default settings."
+          },
+          {
             role: "user",
-            content: `You are a professional assistant. Always reply with:
-
-- HEADINGS in ALL CAPS lines
-- bullet points using •
-- short paragraphs (2-3 lines max)
-- frequent line breaks for readability
-- never produce dense walls of text
-- absolutely no Markdown or special symbols
-
-Now handle this request carefully:
-
-${userPrompt}`
+            content: `${userPrompt}`
           }
         ]
       })
