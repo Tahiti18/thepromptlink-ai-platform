@@ -1,3 +1,5 @@
+import fetch from 'node-fetch';
+
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -11,17 +13,46 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const responseBody = {
-      message: "Hello! I'm Claude and the function is working! PromptLink is connected!"
-    };
+    const body = JSON.parse(event.body);
+    const userPrompt = body.message || "Say hello";
 
-    console.log("Returning response:", responseBody);
+    const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "claude-3-opus-20240229",
+        max_tokens: 500,
+        messages: [
+          { role: "user", content: userPrompt }
+        ]
+      })
+    });
+
+    const data = await anthropicResponse.json();
+
+    if (!anthropicResponse.ok) {
+      console.error("Anthropic API error:", data);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: data })
+      };
+    }
+
+    const claudeReply = data.content?.[0]?.text || "Claude replied, but no text found.";
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(responseBody)
+      body: JSON.stringify({
+        message: claudeReply
+      })
     };
+
   } catch (error) {
     console.error("Function error:", error);
     return {
