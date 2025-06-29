@@ -1,5 +1,19 @@
 import fetch from 'node-fetch';
 
+// Post-processing to enforce formatting rules
+const enforceFormatting = (text) => {
+  let processed = text
+    .replace(/^#+\s*(.*)/gm, (_, p1) => `\n${p1.toUpperCase()}\n`) // markdown to ALL CAPS
+    .replace(/^[-*]\s+/gm, '• ') // normalize bullet points
+    .replace(/\n{2,}/g, '\n\n') // consistent spacing
+    .replace(/([^\n])\n([^\n•])/g, '$1\n\n$2') // add blank lines
+    .replace(/[#>_*`~]/g, '') // strip markdown symbols
+    .replace(/([a-z])\n([A-Z]{2,})/g, '$1\n\n$2') // spacing before ALL CAPS
+    .replace(/([A-Z]{2,})\n([a-z])/g, '$1\n\n$2'); // spacing after ALL CAPS
+
+  return processed.trim();
+};
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -25,22 +39,28 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: "claude-3-opus-20240229",
-        max_tokens: 600,
+        max_tokens: 1000,
+        system: `You are an AI assistant that STRICTLY follows these formatting rules:
+        
+1. HEADINGS: Each main point must begin with an ALL CAPS heading followed by a blank line.
+2. STRUCTURE: Use bullet points (•) for lists. Keep paragraphs under 3 lines.
+3. SPACING: Always have blank lines between sections and after headings.
+4. EMOJIS: Use relevant emojis sparingly to highlight key points.
+5. DO NOT: Use markdown (#, *, >, \`\`\`, etc.), long paragraphs, or unbroken walls of text.
+
+EXAMPLE OUTPUT:
+
+INTRODUCTION
+Thank you for your question!
+
+MAIN POINTS
+• Short, clear explanation.
+• Another concise point.
+
+CONCLUSION
+Summed up clearly ✨`,
         messages: [
-          {
-            role: "user",
-            content: `You are a professional assistant. Always format your replies like this:
-
-- Start each main section with an ALL CAPS line, optionally followed by an emoji.
-- Use simple dashes (-) or dots (•) for bullet points. Never markdown symbols.
-- Keep paragraphs short, max 2-3 lines, and insert frequent line breaks.
-- Sprinkle in occasional emojis to highlight ideas.
-- Never use Markdown (#, >, *, \`\`\`, etc).
-
-Now carefully respond to the following request in that exact style:
-
-${userPrompt}`
-          }
+          { role: "user", content: userPrompt }
         ]
       })
     });
@@ -55,7 +75,9 @@ ${userPrompt}`
       };
     }
 
-    const reply = data.content?.[0]?.text || "No response text.";
+    let reply = data.content?.[0]?.text || "No response text.";
+
+    reply = enforceFormatting(reply);
 
     return {
       statusCode: 200,
