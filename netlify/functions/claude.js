@@ -29,7 +29,18 @@ exports.handler = async (event) => {
         messages: [
           {
             role: "user",
-            content: `${userPrompt}`
+            content: `You are a professional assistant. Always reply with:
+
+- HEADINGS in ALL CAPS lines
+- bullet points using •
+- short paragraphs (2-3 lines max)
+- frequent line breaks for readability
+- never produce dense walls of text
+- absolutely no Markdown or special symbols
+
+Now handle this request carefully:
+
+${userPrompt}`
           }
         ]
       })
