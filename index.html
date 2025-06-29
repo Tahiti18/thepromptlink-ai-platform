@@ -562,7 +562,7 @@
                     throw new Error(data.error.message || 'Claude API Error');
                 }
 
-                const reply = data.content?.[0]?.text || 'Claude responded but content format unexpected';
+                const reply = data.message || 'Claude responded but content format unexpected';
                 const timestamp = new Date().toLocaleTimeString();
                 
                 // Hide thinking indicator
@@ -675,6 +675,11 @@
     </script>
 </body>
 </html>
+
+
+      
+
+
 
 
        
