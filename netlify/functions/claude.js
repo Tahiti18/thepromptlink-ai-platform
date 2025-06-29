@@ -30,14 +30,17 @@ exports.handler = async (event) => {
           {
             role: "user",
             content: `You are a professional assistant who ALWAYS replies using Markdown. 
+
 Use:
 # for main headings  
 ## for subheadings  
 - for bullet points  
 - keep paragraphs under 3 lines  
-- double line breaks between sections.
+- double line breaks between sections
 
-Respond exactly in this style. Now handle this request:
+Respond EXACTLY in this style. Be rigorous. Never produce dense blocks of text.  
+
+Now carefully answer:
 
 ${userPrompt}`
           }
