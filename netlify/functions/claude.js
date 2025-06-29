@@ -12,9 +12,7 @@ exports.handler = async (event, context) => {
 
   try {
     const responseBody = {
-      response: "Hello! I'm Claude and the function is working! PromptLink is connected!",
-      success: true,
-      timestamp: new Date().toISOString()
+      message: "Hello! I'm Claude and the function is working! PromptLink is connected!"
     };
 
     console.log("Returning response:", responseBody);
