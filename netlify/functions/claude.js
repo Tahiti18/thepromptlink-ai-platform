@@ -1,3 +1,4 @@
+const fetch = require('node-fetch');
 Copyexports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
