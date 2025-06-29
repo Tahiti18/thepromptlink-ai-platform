@@ -14,39 +14,7 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body);
-    const userPrompt = body.message || "Say hello and tell me about your capabilities.";
-
-    const anthropicPayload = {
-      model: "claude-3-opus-20240229", // Or your preferred Claude 3 model
-      max_tokens: 600,
-      messages: [
-        {
-          role: "system",
-          content: `You are an AI assistant named Claude. Your primary goal is to provide concise, easily digestible, and visually distinct output.
-          
-          ALWAYS ADHERE TO THESE STRICT FORMATTING RULES:
-          
-          1.  CLEAR HEADINGS: Every main point MUST begin with an ALL CAPS line. Example: "MAIN TOPIC HERE 🚀"
-          2.  BULLET LISTS: Use short bulleted lists for sub-points. Use the solid bullet character (•). Example:
-              •  Sub-point one
-              •  Sub-point two
-          3.  SHORT PARAGRAPHS: Keep all paragraphs exceptionally brief, maximum 2-3 lines. Break up longer thoughts.
-          4.  FREQUENT LINE BREAKS: Use ample line breaks to ensure generous white space and prevent dense text blocks.
-          5.  EMOJIS: Occasionally use relevant, positive emojis for emphasis or to highlight key ideas.
-          6.  NO MARKDOWN: Absolutely, under no circumstances, use ANY Markdown symbols (e.g., #, ##, *, -, >, \`\`\`, ---). This is critical.
-          
-          Your output must be designed for quick scanning and high readability. Prioritize this formatting above all else.`
-        },
-        {
-          role: "user",
-          content: userPrompt
-        },
-        {
-            role: "assistant", // This can sometimes "kickstart" the formatting
-            content: "Alright! I'm ready to help and will ensure my response is perfectly formatted according to your strict guidelines. What would you like to know or discuss? ✨"
-        }
-      ]
-    };
+    const userPrompt = body.message || "Say hello.";
 
     const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -55,7 +23,16 @@ exports.handler = async (event) => {
         "anthropic-version": "2023-06-01",
         "content-type": "application/json"
       },
-      body: JSON.stringify(anthropicPayload)
+      body: JSON.stringify({
+        model: "claude-3-opus-20240229",
+        max_tokens: 600,
+        messages: [
+          {
+            role: "user",
+            content: userPrompt
+          }
+        ]
+      })
     });
 
     const data = await anthropicResponse.json();
@@ -69,7 +46,10 @@ exports.handler = async (event) => {
       };
     }
 
-    const reply = data.content?.[0]?.text || "No response text.";
+    let reply = data.content?.[0]?.text || "No response text.";
+
+    // 🔥 INSERT POST-PROCESSING HERE
+    reply = enforceClaudeFormatting(reply);
 
     return {
       statusCode: 200,
@@ -86,3 +66,49 @@ exports.handler = async (event) => {
     };
   }
 };
+
+// EXACT post-processing function you provided
+function enforceClaudeFormatting(text) {
+  let formattedText = text;
+
+  formattedText = formattedText.split('\n').map(line => {
+    line = line.trim();
+    if (line.length > 3 && line.length < 50 && !line.endsWith('.') && !line.endsWith('?') && !line.endsWith('!')) {
+      if (line !== line.toUpperCase()) {
+        line = line.toUpperCase();
+      }
+      if (!/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/u.test(line)) {
+        line += ' ✨';
+      }
+    }
+    return line;
+  }).join('\n');
+
+  formattedText = formattedText.replace(/^(\s*)[\*-]\s*(.*)$/gm, '$1• $2');
+
+  let lines = formattedText.split('\n');
+  let newLines = [];
+  let currentParagraphLines = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    newLines.push(lines[i]);
+    if (lines[i].trim() !== '') {
+      currentParagraphLines++;
+    } else {
+      currentParagraphLines = 0;
+    }
+
+    if (currentParagraphLines >= 3 && i < lines.length - 1 && lines[i+1].trim() !== '') {
+      newLines.push('');
+      currentParagraphLines = 0;
+    }
+  }
+  formattedText = newLines.join('\n');
+
+  formattedText = formattedText.replace(/\*\*([^\*]+)\*\*/g, '$1');
+  formattedText = formattedText.replace(/\*([^\*]+)\*/g, '$1');
+  formattedText = formattedText.replace(/_([^_]+)_/g, '$1');
+  formattedText = formattedText.replace(/```[a-zA-Z]*\n/g, '').replace(/```/g, '');
+
+  return formattedText;
+}
