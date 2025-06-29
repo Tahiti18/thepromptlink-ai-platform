@@ -28,12 +28,8 @@ exports.handler = async (event) => {
         max_tokens: 600,
         messages: [
           {
-            role: "system",
-            content: "You ALWAYS reply in strict Markdown using:\n# for main headings\n## for subheadings\n- bullet points\n- paragraphs under 3 lines\n- double line breaks between sections.\nNever produce dense text. Always keep formatting tight and clear."
-          },
-          {
             role: "user",
-            content: userPrompt
+            content: `${userPrompt}`
           }
         ]
       })
