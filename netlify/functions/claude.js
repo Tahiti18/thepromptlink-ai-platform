@@ -1,4 +1,4 @@
-exports.handler = async (event, context) => {
+Copyexports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -39,15 +39,41 @@ exports.handler = async (event, context) => {
       };
     }
 
+    const response = await fetch('https://api.genspark.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GENSPARK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+    const claudeResponse = data.choices?.[0]?.message?.content;
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        response: "Hello! I'm Claude and I'm working now! Your function is connected successfully.",
+        response: claudeResponse,
         timestamp: new Date().toISOString()
       })
     };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message })
+    };
+  }
+};
 
   } catch (error) {
     return {
