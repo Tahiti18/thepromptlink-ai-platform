@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -14,7 +14,7 @@ exports.handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body);
-    const userPrompt = body.message || "Say hello";
+    const userPrompt = body.message || "Say hello.";
 
     const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -25,9 +25,18 @@ exports.handler = async (event, context) => {
       },
       body: JSON.stringify({
         model: "claude-3-opus-20240229",
-        max_tokens: 500,
+        max_tokens: 600,
         messages: [
-          { role: "user", content: userPrompt }
+          {
+            role: "user",
+            content: `You are an expert assistant. Always reply with:
+- clear headings
+- bullet points
+- short paragraphs
+- never long dense text
+
+Now handle this request carefully:\n\n${userPrompt}`
+          }
         ]
       })
     });
@@ -35,7 +44,6 @@ exports.handler = async (event, context) => {
     const data = await anthropicResponse.json();
 
     if (!anthropicResponse.ok) {
-      console.error("Anthropic API error:", data);
       return {
         statusCode: 500,
         headers,
@@ -43,18 +51,15 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const claudeReply = data.content?.[0]?.text || "Claude replied, but no text found.";
+    const reply = data.content?.[0]?.text || "No response text.";
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        message: claudeReply
-      })
+      body: JSON.stringify({ message: reply })
     };
 
   } catch (error) {
-    console.error("Function error:", error);
     return {
       statusCode: 500,
       headers,
