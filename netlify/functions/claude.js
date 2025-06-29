@@ -29,7 +29,17 @@ exports.handler = async (event) => {
         messages: [
           {
             role: "user",
-            content: `${userPrompt}`
+            content: `You are an AI assistant named Claude. Please format all responses using this style:
+- Use an ALL CAPS line as a heading for each main point 🚨
+- Create short bulleted lists with • for sub-points under each heading
+- Keep paragraphs very short (2-3 lines max)
+- Insert frequent line breaks to avoid walls of text
+- Occasionally use emojis to highlight key ideas ✨
+- Absolutely NEVER use Markdown symbols like #, >, ---, \`\`\` etc.
+
+Now, respond to this user request:
+
+${userPrompt}`
           }
         ]
       })
