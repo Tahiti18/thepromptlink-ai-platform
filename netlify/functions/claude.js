@@ -1,70 +1,78 @@
-// netlify/functions/claude.js
-export default async (request, context) => {
-  // Handle CORS preflight requests
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    });
+const fetch = require('node-fetch');
+
+exports.handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method Not Allowed' })
+    };
   }
 
   try {
-    const { message, conversationHistory = [] } = await request.json();
+    const { prompt } = JSON.parse(event.body);
     
-    // For now, we'll return a mock response
-    // Later we'll integrate with actual Claude API
-    const response = {
-      message: `Claude received: "${message}". This is a test response from the Claude function. Integration with Anthropic's API will be added next.`,
-      timestamp: new Date().toISOString(),
-      status: 'success',
-      conversationHistory: [...conversationHistory, {
-        role: 'user',
-        content: message,
+    if (!prompt) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Prompt required' })
+      };
+    }
+
+    const GENSPARK_API_KEY = process.env.GENSPARK_API_KEY;
+    
+    if (!GENSPARK_API_KEY) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'API key not configured' })
+      };
+    }
+
+    const response = await fetch('https://api.genspark.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GENSPARK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+    const claudeResponse = data.choices?.[0]?.message?.content;
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        response: claudeResponse,
         timestamp: new Date().toISOString()
-      }, {
-        role: 'assistant',
-        content: `Claude received: "${message}". This is a test response from the Claude function. Integration with Anthropic's API will be added next.`,
-        timestamp: new Date().toISOString()
-      }]
+      })
     };
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
-    });
-
   } catch (error) {
-    console.error('Claude function error:', error);
-    
-    return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      details: error.message,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message })
+    };
   }
 };
