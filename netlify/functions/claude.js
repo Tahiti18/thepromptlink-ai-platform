@@ -29,14 +29,18 @@ exports.handler = async (event) => {
         messages: [
           {
             role: "user",
-            content: `You are a world-class professional AI who ALWAYS:
-- uses clear, bold headings
-- breaks ideas into bullet points
-- writes short paragraphs (2-3 lines)
-- inserts frequent line breaks for clarity
-- absolutely never creates long dense walls of text
+            content: `You are a world-class AI. 
+Always reply using strict Markdown format:
 
-Now respond to this request in that exact style:
+# Main Heading
+## Subheadings
+- Bullet points
+- Short paragraphs (2-3 lines)
+- Frequent line breaks
+
+Never create long dense text blocks.
+
+Now handle this request in that exact style:
 
 ${userPrompt}`
           }
