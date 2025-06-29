@@ -11,16 +11,21 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    const responseBody = {
+      response: "Hello! I'm Claude and the function is working! PromptLink is connected!",
+      success: true,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log("Returning response:", responseBody);
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        response: "Hello! I'm Claude and the function is working! PromptLink is connected!",
-        success: true,
-        timestamp: new Date().toISOString()
-      })
+      body: JSON.stringify(responseBody)
     };
   } catch (error) {
+    console.error("Function error:", error);
     return {
       statusCode: 500,
       headers,
