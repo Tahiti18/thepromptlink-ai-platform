@@ -29,18 +29,15 @@ exports.handler = async (event) => {
         messages: [
           {
             role: "user",
-            content: `You are a formatting machine.
-Your ONLY mission is to produce output that is:
+            content: `You are a professional assistant who ALWAYS replies using Markdown. 
+Use:
+# for main headings  
+## for subheadings  
+- for bullet points  
+- keep paragraphs under 3 lines  
+- double line breaks between sections.
 
-# HEAVILY FORMATTED MARKDOWN
-
-- Always use H1 (#) and H2 (##) headings
-- Always break to a blank line before and after bullets
-- Keep bullet lines very short (1 sentence)
-- Split long explanations into multiple short paragraphs
-- Absolutely NEVER produce long dense walls of text
-
-Now carefully answer the user's prompt below in this strict style:
+Respond exactly in this style. Now handle this request:
 
 ${userPrompt}`
           }
