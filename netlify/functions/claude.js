@@ -15,8 +15,8 @@ exports.handler = async (event, context) => {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        success: true,
         response: "Hello! I'm Claude and the function is working! PromptLink is connected!",
+        success: true,
         timestamp: new Date().toISOString()
       })
     };
