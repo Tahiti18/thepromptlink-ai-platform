@@ -29,13 +29,16 @@ exports.handler = async (event) => {
         messages: [
           {
             role: "user",
-            content: `You are an expert assistant. Always reply with:
-- clear headings
-- bullet points
-- short paragraphs
-- never long dense text
+            content: `You are a world-class professional AI who ALWAYS:
+- uses clear, bold headings
+- breaks ideas into bullet points
+- writes short paragraphs (2-3 lines)
+- inserts frequent line breaks for clarity
+- absolutely never creates long dense walls of text
 
-Now handle this request carefully:\n\n${userPrompt}`
+Now respond to this request in that exact style:
+
+${userPrompt}`
           }
         ]
       })
