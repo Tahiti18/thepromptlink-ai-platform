@@ -13,8 +13,14 @@ exports.handler = async (event) => {
   }
 
   try {
+    console.log("=== Incoming event ===");
+    console.log(JSON.stringify(event, null, 2));
+
     const body = JSON.parse(event.body);
+    console.log("Parsed body:", body);
+
     const userPrompt = body.message || "Say hello.";
+    console.log("User prompt:", userPrompt);
 
     const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -35,9 +41,13 @@ exports.handler = async (event) => {
       })
     });
 
+    console.log("Raw anthropic response status:", anthropicResponse.status);
+
     const data = await anthropicResponse.json();
+    console.log("Anthropic JSON:", data);
 
     if (!anthropicResponse.ok) {
+      console.error("Anthropic API returned non-OK status:", anthropicResponse.status);
       return {
         statusCode: 500,
         headers,
@@ -45,7 +55,14 @@ exports.handler = async (event) => {
       };
     }
 
-    const reply = data.content?.[0]?.text || "No response text.";
+    let reply = "No response text.";
+    if (data.content && Array.isArray(data.content) && data.content[0]?.text) {
+      reply = data.content[0].text;
+    } else {
+      console.error("Data did not have expected content array.");
+    }
+
+    console.log("Reply to return:", reply);
 
     return {
       statusCode: 200,
@@ -54,6 +71,7 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
+    console.error("Function Error:", error);
     return {
       statusCode: 500,
       headers,
